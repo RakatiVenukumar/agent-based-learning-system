@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AI Agent System</title>
+    <style>
+        body {
+            font-family: Arial;
+            margin: 40px;
+        }
+        h2 {
+            color: #333;
+        }
+        .box {
+            border: 1px solid #ccc;
+            padding: 15px;
+            margin-top: 20px;
+            border-radius: 8px;
+        }
+        .pass {
+            color: green;
+        }
+        .fail {
+            color: red;
+        }
+        button {
+            padding: 10px 15px;
+            cursor: pointer;
+        }
+        input {
+            padding: 8px;
+            margin: 5px;
+        }
+    </style>
+</head>
+
+<body>
+
+<h2>📘 Educational Content Generator</h2>
+
+<form method="POST">
+    <label>Grade:</label><br>
+    <input type="number" name="grade" required><br><br>
+
+    <label>Topic:</label><br>
+    <input type="text" name="topic" required><br><br>
+
+    <button type="submit">Generate</button>
+</form>
+
+{% if result %}
+
+<div class="box">
+    <h3>🧠 Generator Output</h3>
+    <pre>{{ result.initial_output | tojson(indent=2) }}</pre>
+</div>
+
+<div class="box">
+    <h3>🔍 Reviewer Result</h3>
+
+    {% if result.review.status == "pass" %}
+        <p class="pass">Status: PASS</p>
+    {% else %}
+        <p class="fail">Status: FAIL</p>
+    {% endif %}
+
+    <pre>{{ result.review | tojson(indent=2) }}</pre>
+</div>
+
+{% if result.refined_output %}
+<div class="box">
+    <h3>🔁 Refined Output</h3>
+    <pre>{{ result.refined_output | tojson(indent=2) }}</pre>
+</div>
+{% endif %}
+
+{% endif %}
+
+</body>
+</html>
