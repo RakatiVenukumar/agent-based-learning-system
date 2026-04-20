@@ -1,69 +1,102 @@
-# generator agent
+import os
+import json
+from groq import Groq
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 class GeneratorAgent:
+    def __init__(self):
+        self.client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+
     def generate(self, grade, topic, feedback=None):
         """
-        Generates educational content based on grade and topic.
-
-        Args:
-            grade (int): Student grade level
-            topic (str): Topic to generate content for
-            feedback (list, optional): Feedback from reviewer for refinement
-
-        Returns:
-            dict: Structured output with explanation and MCQs
+        Generates educational content using Groq AI
         """
 
         # -------------------------------
-        # Base Explanation (Grade-friendly)
+        # Prompt Design (VERY IMPORTANT)
         # -------------------------------
-        explanation = (
-            "Angles are formed when two lines meet at a point. "
-            "There are different types of angles. "
-            "An acute angle is less than 90 degrees. "
-            "A right angle is exactly 90 degrees. "
-            "An obtuse angle is more than 90 degrees but less than 180 degrees. "
-            "A straight angle is exactly 180 degrees."
-        )
+        base_prompt = f"""
+You are an educational content generator.
 
-        # -------------------------------
-        # Refinement Logic (if feedback exists)
-        # Simplify explanation for better clarity
-        # -------------------------------
+Generate content for:
+Grade: {grade}
+Topic: {topic}
+
+Rules:
+- Language must match grade level
+- Keep explanation clear and correct
+- Generate exactly 3 MCQs
+- Each MCQ must have 4 options
+- Include correct answer
+
+Return ONLY valid JSON in this format:
+{{
+  "explanation": "...",
+  "mcqs": [
+    {{
+      "question": "...",
+      "options": ["A", "B", "C", "D"],
+      "answer": "..."
+    }}
+  ]
+}}
+"""
+
+        # Add refinement if feedback exists
         if feedback:
-            explanation = (
-                "Angles are made when two lines meet. "
-                "Acute angle is less than 90°. "
-                "Right angle is 90°. "
-                "Obtuse angle is more than 90° but less than 180°. "
-                "Straight angle is 180°."
+            base_prompt += f"""
+
+Improve the content based on this feedback:
+{feedback}
+
+Make it simpler and clearer.
+"""
+
+        try:
+            # -------------------------------
+            # Call Groq API
+            # -------------------------------
+            response = self.client.chat.completions.create(
+                model="llama3-70b-8192",  # strong + fast
+                messages=[
+                    {"role": "user", "content": base_prompt}
+                ],
+                temperature=0.3  # low randomness = stable output
             )
 
-        # -------------------------------
-        # MCQs (Structured, deterministic format)
-        # -------------------------------
-        mcqs = [
-            {
-                "question": "Which angle is less than 90 degrees?",
-                "options": ["Right angle", "Acute angle", "Obtuse angle", "Straight angle"],
-                "answer": "Acute angle"
-            },
-            {
-                "question": "What is the measure of a right angle?",
-                "options": ["45°", "90°", "120°", "180°"],
-                "answer": "90°"
-            },
-            {
-                "question": "Which angle is exactly 180 degrees?",
-                "options": ["Acute angle", "Right angle", "Straight angle", "Obtuse angle"],
-                "answer": "Straight angle"
-            }
-        ]
+            raw_output = response.choices[0].message.content.strip()
 
-        # -------------------------------
-        # Return structured output
-        # -------------------------------
-        return {
-            "explanation": explanation,
-            "mcqs": mcqs
-        }
+            # -------------------------------
+            # Extract JSON safely
+            # -------------------------------
+            start = raw_output.find("{")
+            end = raw_output.rfind("}") + 1
+            json_str = raw_output[start:end]
+
+            parsed_output = json.loads(json_str)
+
+            # -------------------------------
+            # Basic structure validation
+            # -------------------------------
+            if "explanation" not in parsed_output or "mcqs" not in parsed_output:
+                raise ValueError("Invalid structure")
+
+            return parsed_output
+
+        except Exception as e:
+            # -------------------------------
+            # Fallback (VERY IMPORTANT)
+            # -------------------------------
+            return {
+                "explanation": f"Basic explanation of {topic} for grade {grade}.",
+                "mcqs": [
+                    {
+                        "question": f"What is {topic}?",
+                        "options": ["Concept", "Number", "Shape", "None"],
+                        "answer": "Concept"
+                    }
+                ]
+            }
