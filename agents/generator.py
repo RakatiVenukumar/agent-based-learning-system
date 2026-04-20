@@ -1,101 +1,106 @@
 import os
 import json
+import re
 from groq import Groq
 from dotenv import load_dotenv
 
-# Load environment variables
 load_dotenv()
+
 
 class GeneratorAgent:
     def __init__(self):
         self.client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
     def generate(self, grade, topic, feedback=None):
-        """
-        Generates educational content using Groq AI
-        """
-
-        # -------------------------------
-        # Prompt Design (VERY IMPORTANT)
-        # -------------------------------
         base_prompt = f"""
 You are an educational content generator.
 
-Generate content for:
+STRICT INSTRUCTIONS:
+- Output ONLY valid JSON
+- No markdown, no extra text
+- EXACTLY 3 MCQs
+- Each MCQ must have 4 meaningful options
+- Answer must be one of the options
+
 Grade: {grade}
 Topic: {topic}
 
-Rules:
-- Language must match grade level
-- Keep explanation clear and correct
-- Generate exactly 3 MCQs
-- Each MCQ must have 4 options
-- Include correct answer
-
-Return ONLY valid JSON in this format:
+Return:
 {{
-  "explanation": "...",
+  "explanation": "string",
   "mcqs": [
     {{
-      "question": "...",
-      "options": ["A", "B", "C", "D"],
-      "answer": "..."
+      "question": "string",
+      "options": ["opt1","opt2","opt3","opt4"],
+      "answer": "string"
+    }},
+    {{
+      "question": "string",
+      "options": ["opt1","opt2","opt3","opt4"],
+      "answer": "string"
+    }},
+    {{
+      "question": "string",
+      "options": ["opt1","opt2","opt3","opt4"],
+      "answer": "string"
     }}
   ]
 }}
 """
 
-        # Add refinement if feedback exists
         if feedback:
-            base_prompt += f"""
-
-Improve the content based on this feedback:
-{feedback}
-
-Make it simpler and clearer.
-"""
+            base_prompt += f"\nImprove based on: {feedback}"
 
         try:
-            # -------------------------------
-            # Call Groq API
-            # -------------------------------
             response = self.client.chat.completions.create(
-                model="llama3-70b-8192",  # strong + fast
-                messages=[
-                    {"role": "user", "content": base_prompt}
-                ],
-                temperature=0.3  # low randomness = stable output
+                model="llama-3.1-8b-instant",
+                messages=[{"role": "user", "content": base_prompt}],
+                temperature=0.3
             )
 
-            raw_output = response.choices[0].message.content.strip()
+            raw = response.choices[0].message.content.strip()
+
+            # Extract JSON
+            match = re.search(r"\{.*\}", raw, re.DOTALL)
+            if not match:
+                raise ValueError("No JSON found")
+
+            data = json.loads(match.group(0))
 
             # -------------------------------
-            # Extract JSON safely
+            # Enforce key order for MCQs
             # -------------------------------
-            start = raw_output.find("{")
-            end = raw_output.rfind("}") + 1
-            json_str = raw_output[start:end]
+            formatted_mcqs = []
+            for mcq in data.get("mcqs", []):
+                formatted_mcqs.append({
+                    "question": mcq.get("question", ""),
+                    "options": mcq.get("options", []),
+                    "answer": mcq.get("answer", "")
+                })
 
-            parsed_output = json.loads(json_str)
+            data["mcqs"] = formatted_mcqs
 
             # -------------------------------
-            # Basic structure validation
+            # Validation
             # -------------------------------
-            if "explanation" not in parsed_output or "mcqs" not in parsed_output:
+            if "explanation" not in data or "mcqs" not in data:
                 raise ValueError("Invalid structure")
 
-            return parsed_output
+            if len(data["mcqs"]) != 3:
+                raise ValueError("Wrong MCQ count")
+
+            return data
 
         except Exception as e:
-            # -------------------------------
-            # Fallback (VERY IMPORTANT)
-            # -------------------------------
+            print("Generator Error:", e)
+
+            # Fallback
             return {
-                "explanation": f"Basic explanation of {topic} for grade {grade}.",
+                "explanation": f"Basic explanation of {topic}.",
                 "mcqs": [
                     {
                         "question": f"What is {topic}?",
-                        "options": ["Concept", "Number", "Shape", "None"],
+                        "options": ["Concept", "Number", "Process", "Object"],
                         "answer": "Concept"
                     }
                 ]

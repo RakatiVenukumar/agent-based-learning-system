@@ -1,57 +1,50 @@
-# reviewer agent
-
 class ReviewerAgent:
     def review(self, content, grade):
-        """
-        Reviews the generated educational content.
-
-        Args:
-            content (dict): Output from GeneratorAgent
-            grade (int): Target grade level
-
-        Returns:
-            dict: Review result with status and feedback
-        """
-
         feedback = []
 
         explanation = content.get("explanation", "")
         mcqs = content.get("mcqs", [])
 
-        # -------------------------------
-        # 1. Check Explanation Length (Clarity)
-        # Too long → not suitable for lower grades
-        # -------------------------------
+        # Explanation checks
         word_count = len(explanation.split())
-        if grade <= 4 and word_count > 60:
-            feedback.append("Explanation is too long for Grade 4")
 
-        # -------------------------------
-        # 2. Check Concept Coverage (Correctness)
-        # Ensure key concept (straight angle = 180°) exists
-        # -------------------------------
-        if "180" not in explanation:
-            feedback.append("Missing explanation of straight angle (180 degrees)")
+        if word_count < 15:
+            feedback.append("Explanation too short")
 
-        # -------------------------------
-        # 3. Check MCQ Relevance
-        # Questions should match topic (angles)
-        # -------------------------------
+        if word_count > 120:
+            feedback.append("Explanation too long")
+
+        if grade <= 4 and word_count > 50:
+            feedback.append("Too complex for lower grade")
+
+        if grade >= 8 and word_count < 20:
+            feedback.append("Too simple for higher grade")
+
+        # MCQ count
+        if len(mcqs) != 3:
+            feedback.append("Must have exactly 3 MCQs")
+
+        questions_seen = set()
+
         for i, mcq in enumerate(mcqs):
-            if "angle" not in mcq["question"].lower():
-                feedback.append(f"Question {i+1} may not relate to angles")
+            q = mcq.get("question", "")
+            options = mcq.get("options", [])
+            answer = mcq.get("answer")
 
-        # -------------------------------
-        # 4. Check MCQ Structure (Safety check)
-        # -------------------------------
-        for i, mcq in enumerate(mcqs):
-            if len(mcq.get("options", [])) != 4:
-                feedback.append(f"Question {i+1} does not have 4 options")
+            if not q:
+                feedback.append(f"Q{i+1} missing question")
 
-        # -------------------------------
-        # Final Status
-        # -------------------------------
-        status = "pass" if len(feedback) == 0 else "fail"
+            if q in questions_seen:
+                feedback.append(f"Q{i+1} duplicate question")
+            questions_seen.add(q)
+
+            if len(options) != 4:
+                feedback.append(f"Q{i+1} must have 4 options")
+
+            if answer not in options:
+                feedback.append(f"Q{i+1} answer not in options")
+
+        status = "pass" if not feedback else "fail"
 
         return {
             "status": status,

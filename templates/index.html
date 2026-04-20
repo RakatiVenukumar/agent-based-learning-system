@@ -7,28 +7,26 @@
             font-family: Arial;
             margin: 40px;
         }
-        h2 {
-            color: #333;
-        }
+
         .box {
             border: 1px solid #ccc;
             padding: 15px;
             margin-top: 20px;
             border-radius: 8px;
         }
+
         .pass {
             color: green;
+            font-weight: bold;
         }
+
         .fail {
             color: red;
+            font-weight: bold;
         }
-        button {
-            padding: 10px 15px;
-            cursor: pointer;
-        }
-        input {
-            padding: 8px;
-            margin: 5px;
+
+        ul {
+            margin-top: 5px;
         }
     </style>
 </head>
@@ -47,15 +45,38 @@
     <button type="submit">Generate</button>
 </form>
 
+{% if error %}
+<p style="color:red;">{{ error }}</p>
+{% endif %}
+
 {% if result %}
 
+<!-- Step 1 -->
 <div class="box">
-    <h3>🧠 Generator Output</h3>
-    <pre>{{ result.initial_output | tojson(indent=2) }}</pre>
+    <h3>Step 1: 🧠 Generated Content</h3>
+
+    <h4>Explanation:</h4>
+    <p>{{ result.initial_output.explanation }}</p>
+
+    <h4>MCQs:</h4>
+    {% for mcq in result.initial_output.mcqs %}
+        <div style="margin-bottom:15px;">
+            <b>Q{{ loop.index }}: {{ mcq.question }}</b>
+            <ul>
+                {% for opt in mcq.options %}
+                    <li>
+                        {{ ["A", "B", "C", "D"][loop.index0] }}. {{ opt }}
+                    </li>
+                {% endfor %}
+            </ul>
+            <b>Answer:</b> {{ mcq.answer }}
+        </div>
+    {% endfor %}
 </div>
 
+<!-- Step 2 -->
 <div class="box">
-    <h3>🔍 Reviewer Result</h3>
+    <h3>Step 2: 🔍 Review Feedback</h3>
 
     {% if result.review.status == "pass" %}
         <p class="pass">Status: PASS</p>
@@ -63,13 +84,37 @@
         <p class="fail">Status: FAIL</p>
     {% endif %}
 
-    <pre>{{ result.review | tojson(indent=2) }}</pre>
+    {% if result.review.feedback %}
+        <ul>
+            {% for item in result.review.feedback %}
+                <li>{{ item }}</li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>No issues found.</p>
+    {% endif %}
 </div>
 
+<!-- Step 3 -->
 {% if result.refined_output %}
 <div class="box">
-    <h3>🔁 Refined Output</h3>
-    <pre>{{ result.refined_output | tojson(indent=2) }}</pre>
+    <h3>Step 3: 🔁 Refined Content</h3>
+
+    <h4>Explanation:</h4>
+    <p>{{ result.refined_output.explanation }}</p>
+
+    <h4>MCQs:</h4>
+    {% for mcq in result.refined_output.mcqs %}
+        <div style="margin-bottom:15px;">
+            <b>Q{{ loop.index }}: {{ mcq.question }}</b>
+            <ul>
+                {% for opt in mcq.options %}
+                    <li>{{ opt }}</li>
+                {% endfor %}
+            </ul>
+            <b>Answer:</b> {{ mcq.answer }}
+        </div>
+    {% endfor %}
 </div>
 {% endif %}
 

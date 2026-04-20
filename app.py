@@ -4,50 +4,41 @@ from agents.reviewer import ReviewerAgent
 
 app = Flask(__name__)
 
-# -----------------------------------
-# Pipeline Function (same as before)
-# -----------------------------------
+
 def run_pipeline(grade, topic):
     generator = GeneratorAgent()
     reviewer = ReviewerAgent()
 
-    initial_output = generator.generate(grade, topic)
-    review = reviewer.review(initial_output, grade)
+    initial = generator.generate(grade, topic)
+    review = reviewer.review(initial, grade)
 
-    refined_output = None
-
+    refined = None
     if review["status"] == "fail":
-        refined_output = generator.generate(
-            grade,
-            topic,
-            feedback=review["feedback"]
-        )
+        refined = generator.generate(grade, topic, review["feedback"])
 
     return {
-        "initial_output": initial_output,
+        "initial_output": initial,
         "review": review,
-        "refined_output": refined_output
+        "refined_output": refined
     }
 
 
-# -----------------------------------
-# Flask Route
-# -----------------------------------
 @app.route("/", methods=["GET", "POST"])
 def index():
     result = None
+    error = None
 
     if request.method == "POST":
-        grade = int(request.form["grade"])
         topic = request.form["topic"]
+        grade = int(request.form["grade"])
 
-        result = run_pipeline(grade, topic)
+        if not topic.strip():
+            error = "Topic cannot be empty"
+        else:
+            result = run_pipeline(grade, topic)
 
-    return render_template("index.html", result=result)
+    return render_template("index.html", result=result, error=error)
 
 
-# -----------------------------------
-# Run App
-# -----------------------------------
 if __name__ == "__main__":
     app.run(debug=True)
