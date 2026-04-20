@@ -1,42 +1,21 @@
+from flask import Flask, render_template, request
 from agents.generator import GeneratorAgent
 from agents.reviewer import ReviewerAgent
 
+app = Flask(__name__)
+
 # -----------------------------------
-# Pipeline Function
+# Pipeline Function (same as before)
 # -----------------------------------
 def run_pipeline(grade, topic):
-    """
-    Runs the full agent pipeline:
-    1. Generate content
-    2. Review content
-    3. Refine once if failed
-
-    Args:
-        grade (int)
-        topic (str)
-
-    Returns:
-        dict: Contains initial output, review, and refined output (if any)
-    """
-
     generator = GeneratorAgent()
     reviewer = ReviewerAgent()
 
-    # -------------------------------
-    # Step 1: Generate content
-    # -------------------------------
     initial_output = generator.generate(grade, topic)
-
-    # -------------------------------
-    # Step 2: Review content
-    # -------------------------------
     review = reviewer.review(initial_output, grade)
 
     refined_output = None
 
-    # -------------------------------
-    # Step 3: Refinement (ONLY ONCE)
-    # -------------------------------
     if review["status"] == "fail":
         refined_output = generator.generate(
             grade,
@@ -44,9 +23,6 @@ def run_pipeline(grade, topic):
             feedback=review["feedback"]
         )
 
-    # -------------------------------
-    # Final result
-    # -------------------------------
     return {
         "initial_output": initial_output,
         "review": review,
@@ -55,10 +31,23 @@ def run_pipeline(grade, topic):
 
 
 # -----------------------------------
-# Temporary test run (for terminal)
+# Flask Route
+# -----------------------------------
+@app.route("/", methods=["GET", "POST"])
+def index():
+    result = None
+
+    if request.method == "POST":
+        grade = int(request.form["grade"])
+        topic = request.form["topic"]
+
+        result = run_pipeline(grade, topic)
+
+    return render_template("index.html", result=result)
+
+
+# -----------------------------------
+# Run App
 # -----------------------------------
 if __name__ == "__main__":
-    result = run_pipeline(4, "Types of angles")
-
-    import json
-    print(json.dumps(result, indent=2))
+    app.run(debug=True)
