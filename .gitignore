@@ -1,3 +1,2 @@
-__pycache__/
-venv/
-.env
+git add .
+git commit -m "init setup"
