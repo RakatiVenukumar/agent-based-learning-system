@@ -6,15 +6,15 @@ app = Flask(__name__)
 
 
 def run_pipeline(grade, topic):
-    generator = GeneratorAgent()
-    reviewer = ReviewerAgent()
+    g = GeneratorAgent()
+    r = ReviewerAgent()
 
-    initial = generator.generate(grade, topic)
-    review = reviewer.review(initial, grade)
+    initial = g.generate(grade, topic)
+    review = r.review(initial, grade)
 
     refined = None
     if review["status"] == "fail":
-        refined = generator.generate(grade, topic, review["feedback"])
+        refined = g.generate(grade, topic, review["feedback"])
 
     return {
         "initial_output": initial,
@@ -32,8 +32,12 @@ def index():
         topic = request.form["topic"]
         grade = int(request.form["grade"])
 
-        if not topic.strip():
-            error = "Topic cannot be empty"
+        if not topic.strip() or not any(c.isalnum() for c in topic):
+            error = "Invalid topic"
+
+        elif grade <= 2 and any(word in topic.lower() for word in ["integration", "differentiation"]):
+            error = "Topic too advanced for this grade"
+
         else:
             result = run_pipeline(grade, topic)
 

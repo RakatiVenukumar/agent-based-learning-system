@@ -4,18 +4,44 @@
     <title>AI Agent System</title>
     <style>
         body {
-            font-family: Arial;
+            font-family: Arial, sans-serif;
             margin: 40px;
+            background-color: #f7f9fc;
         }
 
-        .box {
-            border: 1px solid #ccc;
-            padding: 15px;
-            margin-top: 20px;
-            border-radius: 8px;
+        h2 {
+            margin-bottom: 20px;
         }
 
-        .pass {
+        form {
+            margin-bottom: 30px;
+        }
+
+        input, button {
+            padding: 8px;
+            margin-top: 5px;
+        }
+
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .question {
+            margin-top: 15px;
+            font-weight: bold;
+        }
+
+        .options {
+            margin-left: 20px;
+            margin-top: 5px;
+        }
+
+        .answer {
+            margin-top: 5px;
             color: green;
             font-weight: bold;
         }
@@ -25,8 +51,14 @@
             font-weight: bold;
         }
 
-        ul {
-            margin-top: 5px;
+        .pass {
+            color: green;
+            font-weight: bold;
+        }
+
+        .error {
+            color: red;
+            margin-top: 10px;
         }
     </style>
 </head>
@@ -36,83 +68,91 @@
 <h2>📘 Educational Content Generator</h2>
 
 <form method="POST">
-    <label>Grade:</label><br>
+    Grade:<br>
     <input type="number" name="grade" required><br><br>
 
-    <label>Topic:</label><br>
+    Topic:<br>
     <input type="text" name="topic" required><br><br>
 
     <button type="submit">Generate</button>
 </form>
 
 {% if error %}
-<p style="color:red;">{{ error }}</p>
+<p class="error">{{ error }}</p>
 {% endif %}
 
 {% if result %}
 
-<!-- Step 1 -->
-<div class="box">
+<!-- STEP 1 -->
+<div class="card">
     <h3>Step 1: 🧠 Generated Content</h3>
 
-    <h4>Explanation:</h4>
+    <p><b>Explanation:</b></p>
     <p>{{ result.initial_output.explanation }}</p>
 
-    <h4>MCQs:</h4>
+    <p><b>Questions:</b></p>
+
     {% for mcq in result.initial_output.mcqs %}
-        <div style="margin-bottom:15px;">
-            <b>Q{{ loop.index }}: {{ mcq.question }}</b>
-            <ul>
-                {% for opt in mcq.options %}
-                    <li>
-                        {{ ["A", "B", "C", "D"][loop.index0] }}. {{ opt }}
-                    </li>
-                {% endfor %}
-            </ul>
-            <b>Answer:</b> {{ mcq.answer }}
+        <div class="question">
+            Q{{ loop.index }}: {{ mcq.question }}
+        </div>
+
+        <div class="options">
+            {% for opt in mcq.options %}
+                <div>{{ ["A","B","C","D"][loop.index0] }}. {{ opt }}</div>
+            {% endfor %}
+        </div>
+
+        <div class="answer">
+            Answer: {{ mcq.answer }}
         </div>
     {% endfor %}
 </div>
 
-<!-- Step 2 -->
-<div class="box">
-    <h3>Step 2: 🔍 Review Feedback</h3>
+<!-- STEP 2 -->
+<div class="card">
+    <h3>Step 2: 🔍 Review</h3>
 
     {% if result.review.status == "pass" %}
-        <p class="pass">Status: PASS</p>
+        <p class="pass">PASS</p>
     {% else %}
-        <p class="fail">Status: FAIL</p>
+        <p class="fail">FAIL</p>
     {% endif %}
 
     {% if result.review.feedback %}
         <ul>
-            {% for item in result.review.feedback %}
-                <li>{{ item }}</li>
+            {% for f in result.review.feedback %}
+                <li>{{ f }}</li>
             {% endfor %}
         </ul>
     {% else %}
-        <p>No issues found.</p>
+        <p>No issues found</p>
     {% endif %}
 </div>
 
-<!-- Step 3 -->
+<!-- STEP 3 -->
 {% if result.refined_output %}
-<div class="box">
+<div class="card">
     <h3>Step 3: 🔁 Refined Content</h3>
 
-    <h4>Explanation:</h4>
+    <p><b>Explanation:</b></p>
     <p>{{ result.refined_output.explanation }}</p>
 
-    <h4>MCQs:</h4>
+    <p><b>Questions:</b></p>
+
     {% for mcq in result.refined_output.mcqs %}
-        <div style="margin-bottom:15px;">
-            <b>Q{{ loop.index }}: {{ mcq.question }}</b>
-            <ul>
-                {% for opt in mcq.options %}
-                    <li>{{ opt }}</li>
-                {% endfor %}
-            </ul>
-            <b>Answer:</b> {{ mcq.answer }}
+        <div class="question">
+            Q{{ loop.index }}: {{ mcq.question }}
+        </div>
+
+        <div class="options">
+            {% for opt in mcq.options %}
+                <div>{{ ["A","B","C","D"][loop.index0] }}. {{ opt }}</div>
+            {% endfor %}
+        </div>
+
+        <div class="answer">
+            Answer: {{ mcq.answer }}
         </div>
     {% endfor %}
 </div>
